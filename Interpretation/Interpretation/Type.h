@@ -8,21 +8,37 @@ namespace Interpretation
     public:
         Parser *owner;
         bool isComplicated, isIntegral;
-        Type(Parser *_owner, bool _isIntegral = false, 
-            std::function<pExprResult(const std::string &)> __valueOf = nullptr) 
-            : isComplicated (false), _valueOf(__valueOf), isIntegral(_isIntegral), owner(_owner),
-            functionCallOperator(nullptr), arrayIndexerOperator(nullptr), isLogicalTrue(nullptr),
-            copyConstructor(nullptr), definition(nullptr), defaultConstructor(nullptr) {}
+        string reflectName;
+        Type(Parser *_owner, 
+            bool _isIntegral = false, 
+            function<pExprResult(const std::string &)> __valueOf = nullptr, 
+            string _reflectName = "", 
+            function<string(pExprResult)> _printableValue = nullptr,
+            function<pExprResult(void)> _defaultConstructor = nullptr) 
+            : 
+            isComplicated (false), 
+            _valueOf(__valueOf), 
+            printableValue(_printableValue),
+            isIntegral(_isIntegral), 
+            owner(_owner),
+            functionCallOperator(nullptr), 
+            arrayIndexerOperator(nullptr), 
+            isLogicalTrue(nullptr),
+            copyConstructor(nullptr), 
+            definition(nullptr), 
+            defaultConstructor(_defaultConstructor), 
+            reflectName(_reflectName) {}
         map <pair<TokenType, pType>, std::function<pExprResult(pExprResult, pExprResult) > > binaryOperations;
         map <TokenType, std::function<pExprResult(pExprResult) > > unaryPrefixOperations; 
         map <pType, std::function<pExprResult(pExprResult) > > typeCasts;
-        std::function<pExprResult(const std::string &)> _valueOf;
-        std::function<pExprResult(pExprResult, const vector<pExprResult>&)> functionCallOperator;
-        std::function<pExprResult(pExprResult, const vector<pExprResult>&)> arrayIndexerOperator;
-        std::function<bool(pExprResult)> isLogicalTrue;  
-        std::function<pExprResult(pExprResult)> copyConstructor;
-        std::function<pExprResult()> defaultConstructor;
+        function<pExprResult(const std::string &)> _valueOf;
+        function<pExprResult(pExprResult, const vector<pExprResult>&)> functionCallOperator;
+        function<pExprResult(pExprResult, const vector<pExprResult>&)> arrayIndexerOperator;
+        function<bool(pExprResult)> isLogicalTrue;  
+        function<pExprResult(pExprResult)> copyConstructor;
+        function<pExprResult()> defaultConstructor;
         pExprResult valueOf(const std::string &s);
+        function<string(pExprResult)> printableValue;
         pExprResult getObjectMember(pExprResult, const std::string &);
         pStatement definition;
     };

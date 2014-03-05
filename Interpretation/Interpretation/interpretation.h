@@ -140,6 +140,7 @@ namespace Interpretation
         TT_INT,                 // "int"
         TT_CHAR,                // "char"
         TT_LONG,                // "long"
+        TT_MSTR,                // "mstr"
         TT_LONGLONG,
         TT_UNSIGNEDLONGLONG,
         TT_UNSIGNEDINT,
@@ -159,9 +160,11 @@ namespace Interpretation
     class Token 
     {
     public:
-        Token(TokenType _type = TT_UNDEFINED, const string &_val = "") : type(_type), strVal(_val) {}
+        Token(TokenType _type = TT_UNDEFINED, const string &_val = "", int _source_line = 0, int _source_line_pos = 0) 
+            : type(_type), strVal(_val), source_line(_source_line), source_line_pos(_source_line_pos) {}
         TokenType type;
         string strVal;
+        int source_line, source_line_pos;
         bool canBeIdentifier() {
             if (type != TT_WORD) {
                 return false;
@@ -188,12 +191,26 @@ namespace Interpretation
                 || a == TT_BRACE_OPEN && b == TT_BRACE_CLOSE
                 || a == TT_BRACKET_OPEN && b == TT_BRACKET_CLOSE);
         }
+        static string repr(TokenType tt) {
+            return 
+                ( tt == TT_PLUS ?               "+" 
+                : tt == TT_MINUS ?              "-" 
+                : tt == TT_MINUS ?              "*" 
+                : tt == TT_MINUS ?              "/" 
+                : tt == TT_SEMICOLON ?          ";"                 
+                : tt == TT_PARENTHESIS_OPEN ?   "(" 
+                : tt == TT_PARENTHESIS_CLOSE ?  ")" 
+                : tt == TT_ASSIGN ?             "=" 
+                : "");
+        }
     };
     
     class Nonterminal 
     {
     public:
         Parser *owner;
+        int source_line;
+        int source_line_pos;
         Nonterminal(Parser *_owner) : owner(_owner) {}
         Token & currentToken();
         Token & nextToken();

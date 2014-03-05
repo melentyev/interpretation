@@ -48,19 +48,10 @@ namespace Interpretation
             switch (specialType) 
             {
             case TT_ECHO:
-                res = expr->execute();
-                if (res->type == owner->basicTypes[TT_DOUBLE])
-                {
-                    cout << "Program output: " << res->value._double << endl;
-                }
-                else if (res->type == owner->basicTypes[TT_BOOL]) 
-                {
-                    cout << "Program output: " << (bool)(res->value._bool) << endl;
-                }
-                else 
-                {
-                    cout << "Program output: " << res->value._int << endl;
-                }
+                res = expr->execute();                
+                cout << (res->type->printableValue 
+                        ? res->type->printableValue(res) 
+                        : "<" + res->type->reflectName + ">") << endl;            
                 break;
             case TT_RETURN:
                 owner->callStack.back()->returnValue = expr->execute();
@@ -98,14 +89,16 @@ namespace Interpretation
                 break;
             }
         }
-        else if (tn) {
+        else if (tn) 
+        {
             pStatementsBlock varLoc = (owner->parsingStatementsBlockStack.empty() 
                 ? owner->callStack.back()->statementsBlockStack.back() 
                 : owner->parsingStatementsBlockStack.back() );
             for (auto &vdDef: this->vds) {
                 pExprResult rhs;
                 if (!owner->parsingStatementsBlockStack.empty() ) {
-                    varLoc->vars[vdDef->vd->id] = nullptr;
+                    varLoc->vars[vdDef->vd->id] 
+                        = (tn->type->defaultConstructor ? tn->type->defaultConstructor() : nullptr);
                 }
                 else {
                     varLoc->vars[vdDef->vd->id] = (

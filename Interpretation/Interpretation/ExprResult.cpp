@@ -12,7 +12,8 @@ namespace Interpretation
         }
         else 
         {
-            throw exception("binaryOperation not defined");
+            throw exception( ("binaryOperation not defined, (" + this->type->reflectName 
+                + ") " + Token::repr(op) + " (" + rhs->type->reflectName + ")").c_str());
         }
     }
     
@@ -61,7 +62,8 @@ namespace Interpretation
             throw exception("typeCast not defined");
         }
     }
-    pExprResult ExprResult::getMember(const string &s) {
+    pExprResult ExprResult::getMember(const string &s) 
+    {
         if (type->isComplicated) 
         {
             return type->getObjectMember(this, s);
@@ -71,4 +73,8 @@ namespace Interpretation
             throw exception("typeCast not defined");
         }
     }
+    /*ExprResult::~ExprResult() 
+    {
+    }
+    */
 }

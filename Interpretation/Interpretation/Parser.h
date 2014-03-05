@@ -10,6 +10,7 @@ namespace Interpretation
         vector<Token> tokens;
         map<TokenType, pType> basicTypes;
         int tokenNumber;
+        int source_line, source_line_pos;
         pNamespace globalNamespace;
         Parser();
         vector<pStackFrame> callStack;

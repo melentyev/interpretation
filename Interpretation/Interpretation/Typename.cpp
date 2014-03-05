@@ -6,17 +6,19 @@ namespace Interpretation {
         bool found = false;
         switch (currentToken().type) {
         case TT_INT:
-            simple = true, simpleType = TT_INT;
-            type = owner->basicTypes[TT_INT];
+            simple = true, simpleType = TT_INT; type = owner->basicTypes[TT_INT];
             break;
         case TT_CHAR:
-            simple = true, simpleType = TT_CHAR;
+            simple = true, simpleType = TT_CHAR, type = owner->basicTypes[TT_CHAR];
             break;
         case TT_FLOAT:
-            simple = true, simpleType = TT_FLOAT;
+            simple = true, simpleType = TT_FLOAT, type = owner->basicTypes[TT_FLOAT];
             break;
         case TT_DOUBLE:
-            simple = true, simpleType = TT_DOUBLE;
+            simple = true, simpleType = TT_DOUBLE, type = owner->basicTypes[TT_DOUBLE];
+            break;
+        case TT_MSTR:
+            simple = true, simpleType = TT_MSTR, type = owner->basicTypes[TT_MSTR];
             break;
         case TT_UNSIGNED:
             simple = true;

@@ -3,14 +3,49 @@
 #include "VarDeclarationAllowDefault.h"
 #include "Parser.h"
 
-#define OP_DEFINING_SIMPLE(var, TT, SIGN, type) var->binaryOperations[make_pair(TT, var)] = [var, this](pExprResult lhs, pExprResult rhs) {pExprResult res = new_ExprResult(var); res->value.type = lhs->value.type SIGN rhs->value.type; return res; }
-#define OP_DEFINING(var_ret, var_l, var_r, TT, SIGN, type_ret, type_l, type_r) var_l->binaryOperations[make_pair(TT, var_r)] = [functionType, boolType, doubleType, intType, this](pExprResult lhs, pExprResult rhs) {pExprResult res = new_ExprResult(var_ret); res->value.type_ret = lhs->value.type_l SIGN rhs->value.type_r; return res; }
-#define OP_DEFINING_TYPECAST_SIMPLE(from, to, from_f, to_f, T) from->typeCasts[to] = [intType, doubleType, boolType, this](pExprResult operand) { pExprResult res = new_ExprResult(to); res->value.to_f = (T)(operand->value.from_f); return res; }
+#define OP_DEFINING(var_ret, var_l, var_r, TT, SIGN, type_ret, type_l, type_r) var_l->binaryOperations[make_pair(TT, var_r)] = \
+    [functionType, intType, boolType, doubleType, this](pExprResult lhs, pExprResult rhs)   \
+    {                                                                                       \
+        pExprResult res = new_ExprResult(var_ret);                                          \
+        res->value.type_ret = lhs->value.type_l SIGN rhs->value.type_r; return res; }
 
+#define OP_DEFINING_SIMPLE(var, TT, SIGN, type) var->binaryOperations[make_pair(TT, var)] = \
+    [var, this](pExprResult lhs, pExprResult rhs)                                       \
+    {                                                                                   \
+        pExprResult res = new_ExprResult(var);                                          \
+        res->value.type = lhs->value.type SIGN rhs->value.type;                         \
+        return res;                                                                     \
+    }
+
+#define OP_DEFINING_ASSIGN(type_var, type) type_var->binaryOperations[make_pair(TT_ASSIGN, type_var)] = \
+            [type_var, this](pExprResult lhs, pExprResult rhs)              \
+        {                                                                   \
+            pExprResult res = new_ExprResult(type_var);                     \
+                lhs->value.type = (rhs->value.type);                        \
+            res->value.type = (rhs->value.type);                            \
+            return res;                                                     \
+        }
+
+#define OP_DEFINING_TYPECAST_SIMPLE(from, to, from_f, to_f, T)                          \
+    from->typeCasts[to] = [intType, doubleType, boolType, this](pExprResult operand)    \
+    {                                                                                   \
+        pExprResult res = new_ExprResult(to);                                           \
+        res->value.to_f = (T)(operand->value.from_f);                                   \
+        return res;                                                                     \
+    }                                                                                   
+#define FUNC_DEFINING_SIMPLE_ARG1(type, strName, f, from_f, to_f)                       \
+        globalNamespace->statementsBlock->vars[strName] = new_ExprResult(functionType); \
+        globalNamespace->statementsBlock->vars[strName]->value.pointer                  \
+            = new Function(this, strName, [this, type](const vector<pExprResult> &args) \
+        {                                                                               \
+            pExprResult res = new_ExprResult(type);                                     \
+            res->value.to_f = f( ( *begin(args) )->value.from_f);                       \
+            return res;                                                                 \
+        });                                                                             
 namespace Interpretation 
 {  
     Parser::Parser() 
-{
+    {
         globalNamespace = pNamespace(new Namespace(this, "") ); 
         globalNamespace->statementsBlock = globalNamespace->new_StatementsBlock();
         pType functionType = basicTypes[TT_FUNCTION] = new Type(this);
@@ -18,53 +53,58 @@ namespace Interpretation
             [functionType, this](pExprResult funcPtr, const vector<pExprResult>& args) 
         {
             pFunction func = (Function*)(funcPtr->value.pointer);
-            
             return func->execute(args, funcPtr->thisPointer);
         };
-        pType intType = basicTypes[TT_INT] = new Interpretation::Type
-            (this, true, [this](const string &s) 
-        {
-            pExprResult res = new_ExprResult();
-            res->value._int = stoi(s);
-            return res;
-        });
-        pType boolType = basicTypes[TT_BOOL] = new Interpretation::Type
-            (this, true, [this](const string &s) 
-        {
-            pExprResult res = new_ExprResult();
-            res->value._bool = (s == "true");
-            return res;
-        });
-        pType doubleType = basicTypes[TT_DOUBLE] = new Type
-            (this, false, [this](const string &s) 
-        {
-            pExprResult res = new_ExprResult();
-            res->value._double = stod(s);
-            return res;
-        });
-        /*pType stringType = pType(new Type(this, false) );
-        stringType->definition = globalNamespace->statementsBlock;
-        globalNamespace->statementsBlock->vars["string"] = pExprResult(new ExprResult(stringType) );
-        */
-        OP_DEFINING(intType, intType, intType, TT_PLUS, +, _int, _int, _int);
-        OP_DEFINING(intType, intType, intType, TT_MINUS, -, _int, _int, _int);
+        pType intType = basicTypes[TT_INT] = new Interpretation::Type(this, true, [this](const string &s) 
+            {
+                pExprResult res = new_ExprResult();
+                res->value._int = stoi(s);
+                return res;
+            }, "int", [](pExprResult val) 
+            {
+                char buf[30]; 
+                sprintf(buf, "%d", val->value._int); 
+                return string(buf); 
+            });
+        pType boolType = basicTypes[TT_BOOL] = new Interpretation::Type(this, true, [this](const string &s) 
+            {
+                pExprResult res = new_ExprResult();
+                res->value._bool = (s == "true");
+                return res;
+            }, "bool", [](pExprResult val) 
+            { 
+                return (val->value._bool ? "true" : "false"); 
+            });
+        pType doubleType = basicTypes[TT_DOUBLE] = new Type(this, false, [this](const string &s) 
+            {
+                pExprResult res = new_ExprResult();
+                res->value._double = stod(s);
+                return res;
+            }, "double", [](pExprResult val) 
+            {
+                char buf[30]; 
+                sprintf(buf, "%lf", val->value._double); 
+                return string(buf); 
+            });
+        pType mstrType = basicTypes[TT_MSTR] = new Type(this, false, [this](const string &s) 
+            {
+                pExprResult res = new_ExprResult();
+                res->value.pointer = new string(s);
+                return res;
+        }, "mstr", [](pExprResult val) { return *((string*)val->value.pointer); } );
+        OP_DEFINING(intType, intType, intType, TT_PLUS,     +, _int, _int, _int);
+        OP_DEFINING(intType, intType, intType, TT_MINUS,    -, _int, _int, _int);
         OP_DEFINING(intType, intType, intType, TT_ASTERISK, *, _int, _int, _int);
-        OP_DEFINING(intType, intType, intType, TT_SLASH, /, _int, _int, _int);
-        OP_DEFINING(intType, intType, intType, TT_PERCENT, %, _int, _int, _int);
-        OP_DEFINING(boolType, intType, intType, TT_EQUAL, == , _bool, _int, _int);
+        OP_DEFINING(intType, intType, intType, TT_SLASH,    /, _int, _int, _int);
+        OP_DEFINING(intType, intType, intType, TT_PERCENT,  %, _int, _int, _int);
+        OP_DEFINING(boolType, intType, intType, TT_LESS,    < , _bool, _int, _int);
+        OP_DEFINING(boolType, intType, intType, TT_GR,      > , _bool, _int, _int);
+        OP_DEFINING(boolType, intType, intType, TT_EQUAL,   == , _bool, _int, _int);
         OP_DEFINING(boolType, intType, intType, TT_LESS_EQ, <= , _bool, _int, _int);
-        OP_DEFINING(boolType, intType, intType, TT_GR_EQ, >= , _bool, _int, _int);
-        OP_DEFINING(boolType, intType, intType, TT_LESS, < , _bool, _int, _int);
-        OP_DEFINING(boolType, intType, intType, TT_GR, > , _bool, _int, _int);
-        OP_DEFINING(boolType, intType, intType, TT_NOT_EQ, != , _bool, _int, _int);
-        intType->binaryOperations[make_pair(TT_ASSIGN, intType)] = 
-            [intType, this](pExprResult lhs, pExprResult rhs) 
-        { 
-            pExprResult res = new_ExprResult(intType);
-            lhs->value._int = (rhs->value._int);  
-            res->value._int = (rhs->value._int); 
-            return res; 
-        };
+        OP_DEFINING(boolType, intType, intType, TT_GR_EQ,   >= , _bool, _int, _int);
+        OP_DEFINING(boolType, intType, intType, TT_NOT_EQ,  != , _bool, _int, _int);
+        OP_DEFINING_ASSIGN(intType, _int);
+        OP_DEFINING_ASSIGN(doubleType, _double);
         intType->copyConstructor = 
             [intType, this](pExprResult obj) 
         {
@@ -106,23 +146,9 @@ namespace Interpretation
             }
             return (pExprResult)nullptr;
         });
-
-        globalNamespace->statementsBlock->vars["sin"] = new_ExprResult(functionType);
-        globalNamespace->statementsBlock->vars["sin"]->value.pointer 
-            = new Function(this, "sin", [this, doubleType](const vector<pExprResult> &args) 
-        {
-            pExprResult res = new_ExprResult(doubleType);
-            res->value._double = sin( ( *begin(args) )->value._double);
-            return res;
-        });
-        globalNamespace->statementsBlock->vars["sqrt"] = new_ExprResult(functionType);
-        globalNamespace->statementsBlock->vars["sqrt"]->value.pointer 
-            = new Function(this, "sqrt", [this, doubleType](const vector<pExprResult> &args) 
-        {
-            pExprResult res = new_ExprResult(doubleType);
-            res->value._double = sqrt( ( *begin(args) )->value._double);
-            return res;
-        });
+        FUNC_DEFINING_SIMPLE_ARG1(doubleType, "sin", sin, _double, _double);
+        FUNC_DEFINING_SIMPLE_ARG1(doubleType, "sqrt", sqrt, _double, _double);
+        
         globalNamespace->statementsBlock->vars["rand"] = new_ExprResult(functionType);
         globalNamespace->statementsBlock->vars["rand"]->value.pointer 
             = new Function(this, "rand", [this, intType](const vector<pExprResult> &args) 
@@ -158,15 +184,14 @@ namespace Interpretation
     void Parser::parse(ifstream &stream) 
     {
         string str;
+        source_line = 1;
         while (getline(stream, str) ) 
         {
+            source_line_pos = 1;
             splitIntoTokens(str); 
+            source_line++;
         }
         tokens.push_back(Token(TT_END, "") );
-        /*for (auto token = tokens.begin(); token != tokens.end(); token++) 
-        {
-            cout << token->strVal << endl;
-        }*/
         tokenNumber = 0;
         parsingStatementsBlockStack.push_back(globalNamespace->statementsBlock);
         try 
@@ -191,7 +216,8 @@ namespace Interpretation
         static bool isEscapeSequence = false;
         static bool isMultyLineComment = false;
         static Token current(TT_UNDEFINED, "");
-        static auto pushToken = [this](Token &token ) 
+        int token_started = this->source_line_pos;
+        static auto pushToken = [this, &token_started](Token &token ) 
         { 
             if(token.type != TT_UNDEFINED) 
             {  
@@ -203,6 +229,7 @@ namespace Interpretation
                     else if (token.strVal == "double") token.type = TT_DOUBLE;
                     else if (token.strVal == "long") token.type = TT_LONG;
                     else if (token.strVal == "bool") token.type = TT_BOOL;
+                    else if (token.strVal == "mstr") token.type = TT_MSTR;                    
                     else if (token.strVal == "return") token.type = TT_RETURN;
                     else if (token.strVal == "while") token.type = TT_WHILE;
                     else if (token.strVal == "if") token.type = TT_IF;
@@ -232,14 +259,16 @@ namespace Interpretation
                     else if (token.strVal == "!=") token.type = TT_NOT_EQ;
                     else if (token.strVal == "||") token.type = TT_DOUBLE_PIPE;
                     else if (token.strVal == "&&") token.type = TT_DOUBLE_AMP;
-                    else if (token.strVal == ";") token.type = TT_SEMICOLON;
                     else if (token.strVal == ",") token.type = TT_COMMA;
                     else if (token.strVal == ".") token.type = TT_DOT;
                     else if (token.strVal == "->") token.type = TT_ARROW;
                     else if (token.strVal == "!") token.type = TT_EXCL;
                     
                 }
+                token.source_line = this->source_line;
+                token.source_line_pos = token_started;
                 tokens.push_back(token); 
+                token_started = this->source_line_pos + 1;
                 token = Token(TT_UNDEFINED, "");
             }
         };
@@ -250,6 +279,7 @@ namespace Interpretation
                 if (*it == '*' && *(it + 1) == '/') 
                 {
                     isMultyLineComment = false;
+                    it++;
                 }
             }
             else if (isStringToken) 
@@ -324,16 +354,19 @@ namespace Interpretation
             {
                 pushToken(current), pushToken(current = Token(TT_BRACKET_CLOSE, "}"));
             }
-            else if (*it == '/' && current.strVal == "*") 
+            else if (*it == ';') {
+                pushToken(current), pushToken(current = Token(TT_SEMICOLON, ";"));
+            }
+            else if (*it == '*' && current.strVal == "/") 
             {
                 isMultyLineComment = true;
                 current = Token(TT_UNDEFINED, "");
             }
-            else if (*it == '/' && current.strVal == "*") 
+            /*else if (*it == '/' && current.strVal == "*") 
             {
                 current = Token(TT_UNDEFINED, "");
                 break;
-            }
+            }*/
             else if (*it == '.') 
             {
                 if (current.type == TT_NUMBER) 
@@ -421,7 +454,7 @@ namespace Interpretation
             }
             return (isInt ? TT_INT : (isFloat ? TT_FLOAT : TT_DOUBLE) );
         }
-        else if(t.type == TT_STRING) return TT_STRING;
+        else if(t.type == TT_STRING) return TT_MSTR;
         else if(t.type == TT_TRUE || t.type == TT_FALSE) return TT_BOOL;
         return TT_UNDEFINED;
     }
