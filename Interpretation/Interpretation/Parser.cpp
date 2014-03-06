@@ -21,7 +21,7 @@
             [type_var, this](pExprResult lhs, pExprResult rhs)              \
         {                                                                   \
             pExprResult res = new_ExprResult(type_var);                     \
-                lhs->value.type = (rhs->value.type);                        \
+            lhs->value.type = (rhs->value.type);                            \
             res->value.type = (rhs->value.type);                            \
             return res;                                                     \
         }
@@ -41,9 +41,17 @@
             pExprResult res = new_ExprResult(type);                                     \
             res->value.to_f = f( ( *begin(args) )->value.from_f);                       \
             return res;                                                                 \
-        });                                                                             
+        });        
+#define OP_DEFINING_UNARY(var_ret, TT, SIGN, type_ret)                                  \
+    var_ret->unaryPrefixOperations[TT] = [var_ret, this](pExprResult operand)           \
+        {                                                                               \
+            pExprResult res = new_ExprResult(var_ret);                                  \
+            res->value.type_ret = (SIGN(operand->value.type_ret) );                     \
+            return res;                                                                 \
+        };
 namespace Interpretation 
 {  
+    Parser* Parser::_self = Parser::create();
     Parser::Parser() 
     {
         globalNamespace = pNamespace(new Namespace(this, "") ); 
@@ -62,7 +70,7 @@ namespace Interpretation
                 return res;
             }, "int", [](pExprResult val) 
             {
-                char buf[30]; 
+                char buf[100]; 
                 sprintf(buf, "%d", val->value._int); 
                 return string(buf); 
             });
@@ -82,10 +90,10 @@ namespace Interpretation
                 return res;
             }, "double", [](pExprResult val) 
             {
-                char buf[30]; 
+                char buf[100]; 
                 sprintf(buf, "%lf", val->value._double); 
                 return string(buf); 
-            });
+            }, [this]() {  return new_ExprResult();  });
         pType mstrType = basicTypes[TT_MSTR] = new Type(this, false, [this](const string &s) 
             {
                 pExprResult res = new_ExprResult();
@@ -105,6 +113,8 @@ namespace Interpretation
         OP_DEFINING(boolType, intType, intType, TT_NOT_EQ,  != , _bool, _int, _int);
         OP_DEFINING_ASSIGN(intType, _int);
         OP_DEFINING_ASSIGN(doubleType, _double);
+        OP_DEFINING_UNARY(intType, TT_MINUS, -, _int);
+        OP_DEFINING_UNARY(doubleType, TT_MINUS, -, _double);
         intType->copyConstructor = 
             [intType, this](pExprResult obj) 
         {
@@ -112,12 +122,7 @@ namespace Interpretation
             res->value._int = (obj->value._int); 
             return res; 
         };
-        intType->unaryPrefixOperations[TT_MINUS] = [intType, this](pExprResult operand) 
-        { 
-            pExprResult res = new_ExprResult(intType); 
-            res->value._int = -(operand->value._int); 
-            return res; 
-        };
+        
         intType->isLogicalTrue = [intType, this](pExprResult operand) 
         {
             return (bool)(operand->value._int != 0);
@@ -280,6 +285,7 @@ namespace Interpretation
                 {
                     isMultyLineComment = false;
                     it++;
+                    this->source_line_pos++;
                 }
             }
             else if (isStringToken) 
@@ -416,6 +422,7 @@ namespace Interpretation
                 current.strVal += *it;
             }
             it++;
+            this->source_line_pos++;
         }
         pushToken(current);
     }
@@ -458,8 +465,30 @@ namespace Interpretation
         else if(t.type == TT_TRUE || t.type == TT_FALSE) return TT_BOOL;
         return TT_UNDEFINED;
     }
+    void Parser::parsingException(string func, string file, int line, Token t, string msg) 
+    {
+        throw exception( (string("parsingException:\n")
+            + "Source func: " + func + "\n"
+            + "Source file: " + file + "\n"
+            + "Source line: " + to_string(__LINE__) + "\n"
+            + "Token: " + to_string(t.source_line) + ":" + to_string(t.source_line_pos) + "\n"
+            + "Msg: " + msg + (msg.empty() ? "" : "\n" ) ).c_str() );
+    }
     pExprResult Parser::new_ExprResult(pType type) 
     {
         return pExprResult(new ExprResult(type) );
+    }
+    bool Parser::hasMoreTokens() 
+    {
+        return tokenNumber < ((int) tokens.size() - 1);
+    }
+    Parser* Parser::get() 
+    {
+        return _self;
+    }
+    Parser* Parser::create() 
+    {
+        Parser::_self = new Parser();
+        return Parser::_self;
     }
 }

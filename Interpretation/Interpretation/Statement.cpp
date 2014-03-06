@@ -10,9 +10,9 @@ namespace Interpretation
         if (isClass) 
         {
             pType type = owner->parsingStatementsBlockStack.back()->vars[_namespace->id]->type;
-            if ( !(type->defaultConstructor) )
+            if ( !(type->_defaultConstructor) )
             {
-                type->defaultConstructor = [this, type]() 
+                type->_defaultConstructor = [this, type]() 
                 {
                     pExprResult res = this->owner->new_ExprResult(type);
                     for (auto it = begin(type->definition->_namespace->statementsBlock->vars);
@@ -21,7 +21,7 @@ namespace Interpretation
                         if (it->second && it->second->type == owner->basicTypes[TT_FUNCTION] ) {
                             continue;
                         }
-                        res->fieldValues[it->first] = this->owner->new_ExprResult(this->owner->basicTypes[TT_INT]);
+                        res->fieldValues[it->first] = it->second->type->defaultConstructor();
                     }
                     ;
                     return res;
@@ -98,7 +98,7 @@ namespace Interpretation
                 pExprResult rhs;
                 if (!owner->parsingStatementsBlockStack.empty() ) {
                     varLoc->vars[vdDef->vd->id] 
-                        = (tn->type->defaultConstructor ? tn->type->defaultConstructor() : nullptr);
+                        = (tn->type->_defaultConstructor ? tn->type->defaultConstructor() : nullptr);
                 }
                 else {
                     varLoc->vars[vdDef->vd->id] = (
@@ -110,7 +110,7 @@ namespace Interpretation
                             : 
                                 rhs) 
                         : 
-                            (tn->type && tn->type->defaultConstructor 
+                            (tn->type && tn->type->_defaultConstructor 
                             ?
                                 tn->type->defaultConstructor()
                             : 
@@ -161,7 +161,7 @@ namespace Interpretation
             _namespace->parse();   
             if(currentToken().type != TT_SEMICOLON) 
             {
-                throw exception( (string(__FILE__) + ": " + to_string(__LINE__) ).c_str() );    
+                Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken(), "Expected semicolon");   
             }
             nextToken();
         }
@@ -204,13 +204,13 @@ namespace Interpretation
             specialType = currentToken().type;
             if (nextToken().type != TT_PARENTHESIS_OPEN) 
             {
-                throw exception( (string(__FILE__) + ": " + to_string(__LINE__) ).c_str() );
+                Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
             }
             nextToken();
             expr = new_Expr()->parse();
             if (currentToken().type != TT_PARENTHESIS_CLOSE) 
             {
-                throw exception( (string(__FILE__) + ": " + to_string(__LINE__) ).c_str() );
+                Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
             }
             nextToken();
             statement1 = new_Statement()->parse();
@@ -221,19 +221,22 @@ namespace Interpretation
             owner->parsingStatementsBlockStack.push_back(localStatementsBlock);
             isSpecial = true;
             specialType = currentToken().type;
-            if (nextToken().type != TT_PARENTHESIS_OPEN) {
-                throw exception( (string(__FILE__) + ": " + to_string(__LINE__) ).c_str() );
+            if (nextToken().type != TT_PARENTHESIS_OPEN) 
+            {
+                Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
             }
             nextToken();
             statement1 = new_Statement()->parse();
             expr = new_Expr()->parse();
-            if (currentToken().type != TT_SEMICOLON) {
-                throw exception( (string(__FILE__) + ": " + to_string(__LINE__) ).c_str() );
+            if (currentToken().type != TT_SEMICOLON) 
+            {
+                Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
             }
             nextToken();
             expr2 = new_Expr()->parse();
-            if (currentToken().type != TT_PARENTHESIS_CLOSE) {
-                throw exception( (string(__FILE__) + ": " + to_string(__LINE__) ).c_str() );
+            if (currentToken().type != TT_PARENTHESIS_CLOSE) 
+            {
+                Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
             }
             nextToken();
             statement2 = new_Statement()->parse();
@@ -247,7 +250,7 @@ namespace Interpretation
                 {
                     if (!vd->canBeFunctionDeclaration() ) 
                     {
-                        throw exception( (string("Exception") + to_string(__LINE__) ).c_str() );
+                        Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
                     }
                     nextToken();
                     this->function = pFunction(new Function(owner, vd->vd->id) );
@@ -270,8 +273,7 @@ namespace Interpretation
                     }
                     else 
                     {
-                        throw exception( (string("Unexpeted token : ") + string(__FILE__) 
-                            + ": " + to_string(__LINE__) ).c_str() ); 
+                        Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken(), "Unexpeted token");
                     }
                 }
                 else 
@@ -287,7 +289,7 @@ namespace Interpretation
                     }
                     if (currentToken().type != TT_SEMICOLON) 
                     {
-                        throw exception(to_string(__LINE__).c_str() );
+                        Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
                     }
                     nextToken();
                 }
@@ -297,8 +299,9 @@ namespace Interpretation
                 tn = nullptr;
                 expr = new_Expr()->parse();
                 this->function = nullptr;
-                if (currentToken().type != TT_SEMICOLON) {
-                    throw exception(to_string(__LINE__).c_str() );
+                if (currentToken().type != TT_SEMICOLON) 
+                {
+                    Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
                 }
                 nextToken();
             });

@@ -30,9 +30,8 @@ using namespace Interpretation;
 int (main)(int (argc) ) 
 { 
     ifstream in = ifstream("input.txt", ios_base::in);
-    Parser *parser = new Parser();
-    parser->parse(in);
-    parser->run();
+    Parser::get()->parse(in);
+    Parser::get()->run();
     system("pause");
     return 0;
 }

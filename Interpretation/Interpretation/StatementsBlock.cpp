@@ -3,8 +3,9 @@
 
 namespace Interpretation { 
     pStatementsBlock StatementsBlock::parse() {
-        if (currentToken().type != TT_BRACE_OPEN) {
-            throw exception(to_string(__LINE__).c_str() );
+        if (currentToken().type != TT_BRACE_OPEN) 
+        {
+            Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
         }
         owner->parsingStatementsBlockStack.push_back(pStatementsBlock(this) );
         nextToken();

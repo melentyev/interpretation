@@ -6,6 +6,12 @@ namespace Interpretation {
         res->type = this;
         return res;
     }
+    pExprResult Type::defaultConstructor() 
+    {
+        pExprResult res = _defaultConstructor();
+        res->type = this;
+        return res;
+    }
     pExprResult Type::getObjectMember(pExprResult obj, const std::string &field) {
         return obj->fieldValues[field];
     }

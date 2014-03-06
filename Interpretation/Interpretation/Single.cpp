@@ -58,7 +58,7 @@ namespace Interpretation {
                 nextToken();
             }
             else {
-                throw exception( (string(__FILE__) + ": " + to_string(__LINE__) ).c_str() );
+                Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
             }
         }
         else if (currentToken().type == TT_NUMBER || currentToken().type == TT_STRING) 
@@ -73,7 +73,7 @@ namespace Interpretation {
             if (currentToken().type != TT_WORD && currentToken().type != TT_TRUE 
                 && currentToken().type != TT_FALSE) 
             {
-                throw exception( (string(__FILE__) + ": " + to_string(__LINE__) ).c_str() );
+                Parser::get()->parsingException(__FUNCTION__, __FILE__, __LINE__, currentToken() );
             }
             id = currentToken().strVal;
             nextToken();

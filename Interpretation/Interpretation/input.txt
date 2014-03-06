@@ -1,13 +1,20 @@
-
 int glob = 5;
 
-struct point 
+struct point
 {
     double x;
     double y;
 	double len() 
 	{
-		return sqrt(2.0);
+		return sqrt(this->x * this->x + this->y * this->y);
+	}
+	point norm() 
+	{
+		point res;
+		double l = this.len();
+		res.x = this.x / l;
+		res.y = this.y / l;
+		return res;
 	}
 	point rev () 
 	{
@@ -23,11 +30,11 @@ int main()
 	mstr ms = "example";
 	/*echo fibRecursive(8);*/
 	point p1;
-    p1.x = 1;
-	p1.y = 2;
-	echo p1.rev().x;
-	echo p1.rev().y;
-	/*echo p1.len();*/
+    p1.x = (double)1;
+	p1.y = 1.0;
+	point p2 = p1.norm();
+	echo p2.x;
+	echo p2.y;
 	return 0;
 }
 
